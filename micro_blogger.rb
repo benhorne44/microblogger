@@ -5,6 +5,7 @@
 ###
 
 require 'jumpstart_auth'
+# This was a workaround for Ruby 2.0
 require 'certified'
 require 'bitly'
 require 'klout'
