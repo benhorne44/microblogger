@@ -5,8 +5,6 @@
 ###
 
 require 'jumpstart_auth'
-# This was a workaround for Ruby 2.0
-require 'certified'
 require 'bitly'
 require 'klout'
 
@@ -17,7 +15,7 @@ class MicroBlogger
 
   def initialize
     puts "Initializing!"
-    Klout.api_key = 'xu9ztgnacmjx3bu82warbr3h'
+    Klout.api_key = 'ze3d847cmgg43utkyyzeuy56'
     @client = JumpstartAuth.twitter
     @screen_names = @client.followers.collect{|follower| follower.screen_name.downcase}
     @friends = @client.friends
