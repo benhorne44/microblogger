@@ -4,6 +4,11 @@
 # Completed 9/12/13
 ###
 
+# PROBLEMS:
+# 1.  How to call Tweet method from inside other classes
+# 2.  How to pass a message if required to other classes
+# 3.  How best to handle making the Twitter connection
+
 require 'jumpstart_auth'
 require 'bitly'
 require 'klout'
@@ -17,6 +22,43 @@ class MicroBlogger
     Bitly.use_api_version_3
   end
 
+  def run
+    puts "Welcome to the JSL Twitter Client!"
+    while @command != "quit"
+      printf "enter command:"
+      input = gets.chomp
+      make_twitter_connections
+      find_friends
+      execute_command(input)
+    end
+  end
+
+  def commands
+    quit = QuitCommand.new
+    tweet = TweetCommand.new
+    dm = DmCommand.new
+    spam = SpamCommand.new
+    elt = EltCommand.new
+    shorten = ShortenCommand.new
+    turl = TurlCommand.new
+    klout = KloutCommand.new
+    no_action = NoActionCommand.new
+
+    [ quit, tweet, dm, spam, elt, shorten, turl, klout, no_action ]
+  end
+
+  def command_for_input(command_input)
+    commands.find{|command| command.match?(command_input)}
+  end
+
+  def execute_command(input)
+    parts    = input.split(" ")
+    @command = parts[0]
+    message  = parts[1..-1].join(" ")
+
+    command_for_input(@command).execute(message)
+  end
+
   def make_twitter_connections
     @client = JumpstartAuth.twitter
   end
@@ -24,15 +66,6 @@ class MicroBlogger
   def find_friends
     @screen_names = @client.followers.collect{|follower| follower.screen_name.downcase}
     @friends = @client.friends
-  end
-
-  def run
-    puts "Welcome to the JSL Twitter Client!"
-    while @command != "quit"
-      printf "enter command:"
-      input = gets.chomp
-      execute_command(input)
-    end
   end
 
   def klout_score
@@ -90,42 +123,101 @@ class MicroBlogger
     end
   end
 
-  def check_command?(command,message)
-    a = ['t', 'dm', 'spam', 's', 'turl']
-    a.include?(@command) && message.length == 0
-  end
-
-  def execute_command(input)
-    parts    = input.split(" ")
-    @command = parts[0]
-    message  = parts[1..-1].join(" ")
-
-    make_twitter_connections
-    find_friends
-
-    if check_command?(@command,message)
-      puts "Please include text with your command."
-    else
-      case @command
-        when 'quit' then puts "Goodbye!"
-        when 't'    then tweet(message)
-        when 'dm'   then dm(parts[1], parts[2..-1].join(" "))
-        when 'spam' then spam_my_followers(message)
-        when 'elt'  then everyones_last_tweet
-        when 's'    then shorten(message)
-        when 'turl' then tweet(parts[1..-2].join(" ") + " " + shorten(parts[-1]))
-        when 'klout' then klout_score
-        else 
-          puts "Sorry, I don't know how to #{@command}"
-      end
-    end
-  end
-
   def shorten(original_url)
     bitly = Bitly.new('hungryacademy','R_430e9f62250186d2612cca76eee2dbc6')
     short_url = bitly.shorten(original_url).short_url
     puts short_url
     return short_url
+  end
+
+  class QuitCommand
+    def match?(command)
+      command == 'quit'
+    end
+
+    def execute
+      puts "Goodbye!"
+    end
+  end
+
+  class TweetCommand
+    def match?(command)
+      command == 't'
+    end
+
+    def execute(message)
+      tweet(message)
+    end
+  end
+
+  class DmCommand
+    def match?(command)
+      command == 'dm'
+    end
+
+    def execute(message,parts)
+      dm(parts[1], parts[2..-1].join(" "))
+    end
+  end
+
+  class SpamCommand
+    def match?(command)
+      command == 'spam'
+    end
+
+    def execute(message)
+      spam_my_followers(message)
+    end
+  end
+
+  class EltCommand
+    def match?(command)
+      command == 'elt'
+    end
+
+    def execute
+      everyones_last_tweet
+    end
+  end
+
+  class ShortenCommand
+    def match?(command)
+      command == 'spam'
+    end
+
+    def execute
+      shorten_command_execute
+    end
+  end
+
+  class TurlCommand
+    def match?(command)
+      command == 'turl'
+    end
+
+    def execute(message)
+      tweet(parts[1..-2].join(" ") + " " + shorten(parts[-1]))
+    end
+  end
+
+  class KloutCommand
+    def match?(command)
+      command == 'kloat'
+    end
+
+    def execute
+      klout_score
+    end
+  end
+
+  class NoActionCommand
+    def match?(command)
+      
+    end
+
+    def execute
+      puts "Can't deal with that command"
+    end
   end
 
 end
