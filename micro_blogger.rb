@@ -24,18 +24,18 @@ class MicroBlogger
 
   def run
     puts "Welcome to the JSL Twitter Client!"
+      make_twitter_connections
+      find_friends
     while @command != "quit"
       printf "enter command:"
       input = gets.chomp
-      make_twitter_connections
-      find_friends
       execute_command(input)
     end
   end
 
   def commands
     quit = QuitCommand.new
-    tweet = TweetCommand.new
+    tweet = TweetCommand.new(@client)
     dm = DmCommand.new
     spam = SpamCommand.new
     elt = EltCommand.new
@@ -63,6 +63,10 @@ class MicroBlogger
     @client = JumpstartAuth.twitter
   end
 
+  def friends
+    @friends ||= find_friends
+  end
+
   def find_friends
     @screen_names = @client.followers.collect{|follower| follower.screen_name.downcase}
     @friends = @client.friends
@@ -71,24 +75,24 @@ class MicroBlogger
   def klout_score
     @screen_names.each do |human|
       sleep(0.5)
-      identity = Klout::Identity.find_by_screen_name(human) rescue nil
-      if identity.nil?
-        puts "#{human} is a scrub. Go get some friends. Be nice."
-      else
+      
+      identity = fetch_klout_identity(human)
+
+      if identity
         user = Klout::User.new(identity.id)
         popularity = user.score.score.round(2)
         puts "#{human}'s popularity is".ljust(40, ".") + "#{popularity}!"
+      else
+        puts "#{human} is a scrub. Go get some friends. Be nice."
       end
+
     end
   end
 
-  def tweet(message)
-    if message.length <= 140
-      @client.update(message)
-      puts "You've been tweeted!"
-    else
-      puts "WARNING! You have exceeded the 140 character limit, dummy!"
-    end
+  def fetch_klout_identity(human)
+    Klout::Identity.find_by_screen_name(human)
+  rescue
+    nil
   end
 
   def spam_my_followers(message)
@@ -135,12 +139,25 @@ class MicroBlogger
       command == 'quit'
     end
 
-    def execute
+    def execute(message) # this 'message' param is a shim
       puts "Goodbye!"
     end
   end
 
   class TweetCommand
+
+    def client # attr_reader :client
+      @client
+    end
+
+    def initialize(client)
+      @client = client
+    end
+
+    # def tweet(message)
+    #   @client.tweet(message)
+    # end
+
     def match?(command)
       command == 't'
     end
@@ -148,6 +165,16 @@ class MicroBlogger
     def execute(message)
       tweet(message)
     end
+
+    def tweet(message)
+      if message.length <= 140
+        @client.update(message)
+        puts "You've been tweeted!"
+      else
+        puts "WARNING! You have exceeded the 140 character limit, dummy!"
+      end
+    end
+
   end
 
   class DmCommand
